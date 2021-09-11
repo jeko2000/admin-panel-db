@@ -4,7 +4,7 @@
 CREATE SEQUENCE IF NOT EXISTS roles_role_id_seq START WITH 100;
 
 CREATE TABLE IF NOT EXISTS roles (
-  prole_id INTEGER PRIMARY KEY DEFAULT NEXTVAL('roles_role_id_seq'),
+  role_id INTEGER PRIMARY KEY DEFAULT NEXTVAL('roles_role_id_seq'),
   role_name TEXT NOT NULL UNIQUE,
   role_description TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
