@@ -1,3 +1,11 @@
+CREATE TYPE user_row AS (
+  user_id INTEGER,
+  email_address TEXT,
+  password_hash TEXT,
+  role_names TEXT,
+  created_at TIMESTAMP
+);
+
 CREATE OR REPLACE FUNCTION get_user_role_names (
   in_user_id users.user_id % TYPE
 )
@@ -20,14 +28,8 @@ $$
 LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION get_all_users ()
-  RETURNS TABLE (
-      user_id users.user_id % TYPE,
-      email_address users.email_address % TYPE,
-      password_hash users.password_hash % TYPE,
-      role_names TEXT,
-      created_at users.created_at % TYPE
-    )
-    AS $$
+  RETURNS SETOF user_row
+  AS $$
 BEGIN
   RETURN QUERY
   SELECT
@@ -38,6 +40,48 @@ BEGIN
     u.created_at
   FROM
     users u;
+END;
+$$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION get_user_by_user_id (
+  in_user_id users.user_id % TYPE
+)
+  RETURNS SETOF user_row
+  AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    u.user_id,
+    u.email_address,
+    u.password_hash,
+    get_user_role_names (u.user_id) AS role_names,
+    u.created_at
+  FROM
+    users u
+  WHERE
+    u.user_id = in_user_id;
+END;
+$$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION get_user_by_email_address (
+  in_email_address users.email_address % TYPE
+)
+  RETURNS SETOF user_row
+  AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    u.user_id,
+    u.email_address,
+    u.password_hash,
+    get_user_role_names (u.user_id) AS role_names,
+    u.created_at
+  FROM
+    users u
+  WHERE
+    u.email_address = in_email_address;
 END;
 $$
 LANGUAGE plpgsql;
@@ -82,8 +126,14 @@ BEGIN
   RETURNING
     user_id INTO out_user_id;
   -- Associate user role with new user
-  INSERT INTO user_roles(user_id, role_id)
-  VALUES (out_user_id, (SELECT role_id FROM roles WHERE role_name = 'user'));
+  INSERT INTO user_roles (user_id, role_id)
+    VALUES (out_user_id, (
+        SELECT
+          role_id
+        FROM
+          roles
+        WHERE
+          role_name = 'user'));
   -- Associate user_registration_id and corresponding user_id in the rtab table
   INSERT INTO user_registrations_rtab (user_registration_id, user_id)
     VALUES (in_user_registration_id, out_user_id);
